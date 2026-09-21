@@ -69,7 +69,6 @@ jobs:
           /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
           /d:sonar.exclusions="**/wwwroot/lib/**,**/*.db"
           /d:sonar.coverage.exclusions="HotelBooking.Mvc/**,HotelBooking.WebApi/**,HotelBooking.Infrastructure/**"
-          /d:sonar.qualitygate.wait=true
 
       - name: Restore
         run: dotnet restore HotelBooking.sln
