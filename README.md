@@ -101,14 +101,20 @@ All business logic in `HotelBooking.Core` lives in `BookingManager`. It is cover
 - *Readable set-up:* `Helpers/TestData.cs` (data builders) and `Helpers/BookingManagerFactory.cs` (wires the mocks into a `BookingManager`) keep each test focused on its scenario.
 - *Negative and side-effect tests:* failing operations are checked for what they must *not* do, such as adding a booking or mutating the input.
 
+### Branching workflow
+
+- `main` holds the released, stable code.
+- `develop` is the integration branch. Day-to-day work goes here, or into feature branches merged into it.
+- When `develop` is ready, open a **pull request from `develop` to `main`**. That PR runs the CI pipeline below, and its quality gate should pass before you merge. To enforce this, add a branch protection rule on `main` that requires the `Build, test and SonarQube analysis` check.
+
 ### CI pipeline and SonarQube
 
-`.github/workflows/ci.yml` runs on **every push and every pull request**. It:
+`.github/workflows/ci.yml` runs **only on pull requests from `develop` into `main`**. Pushes, and pull requests from any other branch or from a fork, don't trigger the analysis. It:
 1. Checks out the code with full history, which SonarQube needs.
 2. Installs .NET 10, Java 17 and `dotnet-sonarscanner`.
 3. Starts the SonarQube analysis (`sonarscanner begin`).
 4. Restores and builds `HotelBooking.sln`.
-5. Runs all unit and integration tests, and collects coverage in OpenCover format with Coverlet (`coverlet.collector` was added to both test projects).
+5. Runs the unit tests (`HotelBooking.UnitTests`) and collects coverage in OpenCover format with Coverlet. The integration tests are not run in CI; run them locally with `dotnet test HotelBooking.IntegrationTests`.
 6. Ends the analysis (`sonarscanner end`), which uploads code issues and coverage to SonarQube. `sonar.qualitygate.wait=true` makes the job **fail if the quality gate fails**.
 7. Uploads the test result files as a build artifact.
 
@@ -124,4 +130,4 @@ Vendored front-end libraries (`wwwroot/lib`) and the SQLite `.db` files are excl
 3. If you use SonarCloud, also add `/o:"<your-organization>"` to the `sonarscanner begin` command.
 4. The workflow needs a SonarQube server that GitHub-hosted runners can reach. A server on `localhost` won't work.
 
-Pull requests from forks don't receive repository secrets, so the Sonar steps fail for them.
+Pull requests from forks don't receive repository secrets, so the workflow skips them.

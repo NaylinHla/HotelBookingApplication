@@ -1,10 +1,10 @@
 name: CI
 
-# Builds the solution, runs all tests with coverage and performs SonarQube
-# static analysis on every push and on every pull request.
+# Runs the unit tests with coverage and SonarQube static analysis, only for
+# pull requests from the develop branch into the main branch.
 on:
-  push:
   pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -14,6 +14,10 @@ jobs:
   build-test-analyze:
     name: Build, test and SonarQube analysis
     runs-on: ubuntu-latest
+    # Only PRs from develop (in this repository, not a fork) into main.
+    if: >
+      github.head_ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository
 
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -62,9 +66,9 @@ jobs:
       - name: Build
         run: dotnet build HotelBooking.sln --configuration Debug --no-restore
 
-      - name: Run tests with coverage
+      - name: Run unit tests with coverage
         run: >
-          dotnet test HotelBooking.sln
+          dotnet test HotelBooking.UnitTests
           --configuration Debug
           --no-build
           --logger "trx;LogFileName=test-results.trx"
