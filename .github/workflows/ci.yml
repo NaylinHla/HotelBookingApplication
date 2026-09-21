@@ -1,9 +1,12 @@
 name: CI
 
-# Runs the unit tests with coverage and SonarQube static analysis, only for
-# pull requests from the develop branch into the main branch.
+# Unit tests run on pull requests from develop into main. The SonarCloud analysis
+# runs when code lands on main (the free SonarCloud plan only analyses the main
+# branch, not pull requests), i.e. when the develop -> main pull request is merged.
 on:
   pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 permissions:
@@ -14,10 +17,11 @@ jobs:
   build-test-analyze:
     name: Build, test and SonarQube analysis
     runs-on: ubuntu-latest
-    # Only PRs from develop (in this repository, not a fork) into main.
+    # Pushes to main, and PRs from develop (in this repository, not a fork) into main.
     if: >
-      github.head_ref == 'develop' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event_name == 'push' ||
+      (github.head_ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
 
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -53,6 +57,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Begin SonarQube analysis
+        if: github.event_name == 'push'
         run: >
           dotnet sonarscanner begin
           /k:"$SONAR_PROJECT_KEY"
@@ -81,6 +86,7 @@ jobs:
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarQube analysis
+        if: github.event_name == 'push'
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Upload test results
