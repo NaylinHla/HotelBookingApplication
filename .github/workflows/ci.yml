@@ -8,6 +8,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,9 +18,10 @@ jobs:
   build-test-analyze:
     name: Build, test and SonarQube analysis
     runs-on: ubuntu-latest
-    # Pushes to main, and PRs from develop (in this repository, not a fork) into main.
+    # Pushes to main, manual runs, and PRs from develop (in this repository, not a fork) into main.
     if: >
       github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
       (github.head_ref == 'develop' &&
       github.event.pull_request.head.repo.full_name == github.repository)
 
@@ -57,7 +59,7 @@ jobs:
         run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Begin SonarQube analysis
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: >
           dotnet sonarscanner begin
           /k:"$SONAR_PROJECT_KEY"
@@ -86,7 +88,7 @@ jobs:
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
       - name: End SonarQube analysis
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
       - name: Upload test results
