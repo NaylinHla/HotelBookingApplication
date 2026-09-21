@@ -105,17 +105,17 @@ All business logic in `HotelBooking.Core` lives in `BookingManager`. It is cover
 
 - `main` holds the released, stable code.
 - `develop` is the integration branch. Day-to-day work goes here, or into feature branches merged into it.
-- When `develop` is ready, open a **pull request from `develop` to `main`**. That PR runs the CI pipeline below, and its quality gate should pass before you merge. To enforce this, add a branch protection rule on `main` that requires the `Build, test and SonarQube analysis` check.
+- When `develop` is ready, open a **pull request from `develop` to `main`**. The PR runs the build and unit tests. When it is merged, the push to `main` triggers the SonarCloud analysis (the free SonarCloud plan only analyses the `main` branch, not pull requests). To require the tests to pass before merging, add a branch protection rule on `main` that requires the `Build, test and SonarQube analysis` check.
 
 ### CI pipeline and SonarQube
 
-`.github/workflows/ci.yml` runs **only on pull requests from `develop` into `main`**. Pushes, and pull requests from any other branch or from a fork, don't trigger the analysis. It:
+`.github/workflows/ci.yml` runs on **pull requests from `develop` into `main`** (build and unit tests) and on **pushes to `main`**, i.e. after such a PR is merged (build, unit tests and SonarQube analysis). Pull requests from any other branch or from a fork are ignored. It:
 1. Checks out the code with full history, which SonarQube needs.
 2. Installs .NET 10, Java 17 and `dotnet-sonarscanner`.
-3. Starts the SonarQube analysis (`sonarscanner begin`).
+3. Starts the SonarQube analysis (`sonarscanner begin`), on pushes to `main` only.
 4. Restores and builds `HotelBooking.sln`.
 5. Runs the unit tests (`HotelBooking.UnitTests`) and collects coverage in OpenCover format with Coverlet. The integration tests are not run in CI; run them locally with `dotnet test HotelBooking.IntegrationTests`.
-6. Ends the analysis (`sonarscanner end`), which uploads code issues and coverage to SonarQube. `sonar.qualitygate.wait=true` makes the job **fail if the quality gate fails**.
+6. Ends the analysis (`sonarscanner end`), on pushes to `main` only. It uploads code issues and coverage to SonarQube, and `sonar.qualitygate.wait=true` makes the job **fail if the quality gate fails**.
 7. Uploads the test result files as a build artifact.
 
 Vendored front-end libraries (`wwwroot/lib`) and the SQLite `.db` files are excluded from analysis.
@@ -132,7 +132,7 @@ The pipeline is configured for [SonarCloud](https://sonarcloud.io), which is fre
 4. In GitHub, go to *Settings → Secrets and variables → Actions* and add:
    - **secret** `SONAR_TOKEN`: the token from step 3
    - **variables**, only if they differ from the defaults `naylinhla` and `naylinhla_HotelBookingApplication` (SonarCloud keys are lowercase): `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY`
-5. Open a pull request from `develop` to `main`. When the run finishes, the results are on the project's SonarCloud dashboard, the "Project health dashboard" for the presentation.
+5. Merge the pull request from `develop` into `main` (or push to `main`). When the run finishes, the results are on the SonarCloud dashboard, the "Project health dashboard" for the presentation.
 
 To use a self-hosted SonarQube instead, set the variable `SONAR_HOST_URL` to its address (it must be reachable from GitHub-hosted runners) and remove the `/o:` line from the `sonarscanner begin` step.
 
