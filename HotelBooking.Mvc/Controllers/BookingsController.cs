@@ -64,19 +64,29 @@ namespace HotelBooking.Mvc.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("StartDate,EndDate,CustomerId")] Booking booking)
         {
+            string status = "The booking could not be created.";
+
             if (ModelState.IsValid)
             {
-                bool created = await bookingManager.CreateBooking(booking);
-
-                if (created)
+                try
                 {
-                    return RedirectToAction(nameof(Index));
+                    bool created = await bookingManager.CreateBooking(booking);
+
+                    if (created)
+                    {
+                        return RedirectToAction(nameof(Index));
+                    }
+                    status += " There was no available room.";
+                }
+                catch (ArgumentException ex)
+                {
+                    status += " " + ex.Message;
                 }
             }
 
             ViewData["CustomerId"] = new SelectList(
                 await customerRepository.GetAllAsync(), "Id", "Name", booking.CustomerId);
-            ViewBag.Status = "The booking could not be created. There were no available room.";
+            ViewBag.Status = status;
             return View(booking);
         }
 

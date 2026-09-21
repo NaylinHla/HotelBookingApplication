@@ -76,7 +76,7 @@ The integration tests create an in-memory SQLite database, seed it with `DbIniti
 
 ### Unit tests for `HotelBooking.Core`
 
-All business logic in `HotelBooking.Core` lives in `BookingManager`. It is covered by 66 unit tests in `HotelBooking.UnitTests`, with 100% line and branch coverage of `BookingManager`.
+All business logic in `HotelBooking.Core` lives in `BookingManager`. It is covered by 69 unit tests in `HotelBooking.UnitTests`, with 100% line and branch coverage of `BookingManager`.
 
 | File | What it covers |
 |---|---|
@@ -101,27 +101,50 @@ All business logic in `HotelBooking.Core` lives in `BookingManager`. It is cover
 - *Readable set-up:* `Helpers/TestData.cs` (data builders) and `Helpers/BookingManagerFactory.cs` (wires the mocks into a `BookingManager`) keep each test focused on its scenario.
 - *Negative and side-effect tests:* failing operations are checked for what they must *not* do, such as adding a booking or mutating the input.
 
+### Branching workflow
+
+- `main` holds the released, stable code.
+- `develop` is the integration branch. Day-to-day work goes here, or into feature branches merged into it.
+- When `develop` is ready, open a **pull request from `develop` to `main`**. That PR runs the CI pipeline below, and its quality gate should pass before you merge. To enforce this, add a branch protection rule on `main` that requires the `Build, test and SonarQube analysis` check.
+
 ### CI pipeline and SonarQube
 
-`.github/workflows/ci.yml` runs on **every push and every pull request**. It:
+`.github/workflows/ci.yml` runs **only on pull requests from `develop` into `main`**. Pushes, and pull requests from any other branch or from a fork, don't trigger the analysis. It:
 1. Checks out the code with full history, which SonarQube needs.
 2. Installs .NET 10, Java 17 and `dotnet-sonarscanner`.
 3. Starts the SonarQube analysis (`sonarscanner begin`).
 4. Restores and builds `HotelBooking.sln`.
-5. Runs all unit and integration tests, and collects coverage in OpenCover format with Coverlet (`coverlet.collector` was added to both test projects).
+5. Runs the unit tests (`HotelBooking.UnitTests`) and collects coverage in OpenCover format with Coverlet. The integration tests are not run in CI; run them locally with `dotnet test HotelBooking.IntegrationTests`.
 6. Ends the analysis (`sonarscanner end`), which uploads code issues and coverage to SonarQube. `sonar.qualitygate.wait=true` makes the job **fail if the quality gate fails**.
 7. Uploads the test result files as a build artifact.
 
 Vendored front-end libraries (`wwwroot/lib`) and the SQLite `.db` files are excluded from analysis.
 
-**One-time setup required**
+Vendored front-end libraries (`wwwroot/lib`) and the SQLite `.db` files are excluded from analysis. Only `HotelBooking.Core` is measured for **coverage**, because it is the only project with unit tests. `Mvc`, `WebApi` and `Infrastructure` are excluded from coverage (but still analysed for bugs, vulnerabilities and code smells), so they don't drag the quality gate down.
 
-1. Create a project in your SonarQube server (or SonarCloud) and generate a token.
-2. In the GitHub repository, go to *Settings → Secrets and variables → Actions* and add:
-   - secret `SONAR_TOKEN`: the token from step 1
-   - secret `SONAR_HOST_URL`: e.g. `https://sonarqube.example.com`, or `https://sonarcloud.io` for SonarCloud
-   - variable `SONAR_PROJECT_KEY` (optional): the project key, which defaults to `HotelBooking`
-3. If you use SonarCloud, also add `/o:"<your-organization>"` to the `sonarscanner begin` command.
-4. The workflow needs a SonarQube server that GitHub-hosted runners can reach. A server on `localhost` won't work.
+**Free setup with SonarCloud (about 5 minutes)**
 
-Pull requests from forks don't receive repository secrets, so the Sonar steps fail for them.
+The pipeline is configured for [SonarCloud](https://sonarcloud.io), which is free for public repositories. The repository is public, so no server is needed.
+
+1. Sign in to SonarCloud with your GitHub account, click **+ → Analyze new project** and import `HotelBookingApplication`. Choose **With GitHub Actions** and note your *organization key* and *project key*.
+2. In SonarCloud, go to the project's *Administration → Analysis Method* and turn **Automatic Analysis off**. It can't run alongside the CI analysis.
+3. In SonarCloud, go to *My Account → Security* and generate a token.
+4. In GitHub, go to *Settings → Secrets and variables → Actions* and add:
+   - **secret** `SONAR_TOKEN`: the token from step 3
+   - **variables**, only if they differ from the defaults `naylinhla` and `naylinhla_HotelBookingApplication` (SonarCloud keys are lowercase): `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY`
+5. Open a pull request from `develop` to `main`. When the run finishes, the results are on the project's SonarCloud dashboard, the "Project health dashboard" for the presentation.
+
+To use a self-hosted SonarQube instead, set the variable `SONAR_HOST_URL` to its address (it must be reachable from GitHub-hosted runners) and remove the `/o:` line from the `sonarscanner begin` step.
+
+Pull requests from forks don't receive repository secrets, so the workflow skips them.
+
+## Design for testability
+
+`BookingManager` originally read `DateTime.Today` directly, so tests could only use dates relative to the real "today". It now depends on a small `IClock` interface (`SystemClock` is the production implementation, registered in both web apps). The old two-argument constructor still works, and a three-argument constructor accepts a clock, so tests can fix "today" (see `FindAvailableRoom_WithFixedToday_OnlyFutureStartDatesAreAccepted`). The overlap check is also extracted into a small, named `Overlaps` method, which is easier to read than the earlier inline boolean expression. Its behaviour is unchanged.
+
+## Other improvements
+
+- Creating a booking with invalid dates now shows a message in the MVC app and returns `400 Bad Request` from the Web API, instead of an unhandled exception (HTTP 500).
+- Fixed the MVC error message text.
+- Upgraded `Microsoft.OpenApi` and `SQLitePCLRaw.lib.e_sqlite3` to remove the known-vulnerability build warnings.
+- Stopped tracking `.DS_Store`, `.idea/` and the generated SQLite `.db` files (they are now in `.gitignore`).
