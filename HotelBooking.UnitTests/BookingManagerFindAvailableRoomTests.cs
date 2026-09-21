@@ -60,6 +60,25 @@ namespace HotelBooking.UnitTests
             Assert.Equal(1, roomId);
         }
 
+        // ---- Fixed clock: the "today" boundary, independent of the real date
+
+        [Theory]
+        [InlineData("2030-06-09", false)] // yesterday
+        [InlineData("2030-06-10", false)] // today
+        [InlineData("2030-06-11", true)]  // tomorrow
+        public async Task FindAvailableRoom_WithFixedToday_OnlyFutureStartDatesAreAccepted(
+            string startDate, bool expectedAccepted)
+        {
+            var today = new DateTime(2030, 6, 10);
+            var start = DateTime.Parse(startDate);
+            var sut = new BookingManagerFactory(Rooms(1), new List<Booking>(), today);
+
+            if (expectedAccepted)
+                Assert.Equal(1, await sut.Manager.FindAvailableRoom(start, start.AddDays(2)));
+            else
+                await Assert.ThrowsAsync<ArgumentException>(() => sut.Manager.FindAvailableRoom(start, start.AddDays(2)));
+        }
+
         // ---- Single room: every relationship between the requested period
         //      and an existing booking (day +10 .. day +20) ------------------
 

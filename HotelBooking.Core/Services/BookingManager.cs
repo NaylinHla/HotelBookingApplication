@@ -9,12 +9,19 @@ namespace HotelBooking.Core
     {
         private IRepository<Booking> bookingRepository;
         private IRepository<Room> roomRepository;
+        private IClock clock;
 
         // Constructor injection
         public BookingManager(IRepository<Booking> bookingRepository, IRepository<Room> roomRepository)
+            : this(bookingRepository, roomRepository, new SystemClock())
+        {
+        }
+
+        public BookingManager(IRepository<Booking> bookingRepository, IRepository<Room> roomRepository, IClock clock)
         {
             this.bookingRepository = bookingRepository;
             this.roomRepository = roomRepository;
+            this.clock = clock;
         }
 
         public async Task<bool> CreateBooking(Booking booking)
@@ -36,7 +43,7 @@ namespace HotelBooking.Core
 
         public async Task<int> FindAvailableRoom(DateTime startDate, DateTime endDate)
         {
-            if (startDate <= DateTime.Today || startDate > endDate)
+            if (startDate <= clock.Today || startDate > endDate)
                 throw new ArgumentException("The start date cannot be in the past or later than the end date.");
 
             var bookings = await bookingRepository.GetAllAsync();
@@ -45,13 +52,19 @@ namespace HotelBooking.Core
             foreach (var room in rooms)
             {
                 var activeBookingsForCurrentRoom = activeBookings.Where(b => b.RoomId == room.Id);
-                if (activeBookingsForCurrentRoom.All(b => startDate < b.StartDate &&
-                    endDate < b.StartDate || startDate > b.EndDate && endDate > b.EndDate))
+                if (!activeBookingsForCurrentRoom.Any(b => Overlaps(b, startDate, endDate)))
                 {
                     return room.Id;
                 }
             }
             return -1;
+        }
+
+        // Two periods overlap if they share at least one day (start and end
+        // days are inclusive). Assumes startDate <= endDate.
+        private static bool Overlaps(Booking booking, DateTime startDate, DateTime endDate)
+        {
+            return startDate <= booking.EndDate && endDate >= booking.StartDate;
         }
 
         public async Task<List<DateTime>> GetFullyOccupiedDates(DateTime startDate, DateTime endDate)

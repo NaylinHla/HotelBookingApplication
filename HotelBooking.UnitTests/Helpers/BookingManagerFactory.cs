@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using HotelBooking.Core;
 using Moq;
@@ -15,11 +16,15 @@ namespace HotelBooking.UnitTests.Helpers
         public Mock<IRepository<Room>> RoomRepository { get; } = new Mock<IRepository<Room>>();
         public BookingManager Manager { get; }
 
-        public BookingManagerFactory(IEnumerable<Room> rooms, IEnumerable<Booking> bookings)
+        public Mock<IClock> Clock { get; } = new Mock<IClock>();
+
+        // Without an explicit "today", the clock returns the real current date.
+        public BookingManagerFactory(IEnumerable<Room> rooms, IEnumerable<Booking> bookings, DateTime? today = null)
         {
             RoomRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(rooms);
             BookingRepository.Setup(r => r.GetAllAsync()).ReturnsAsync(bookings);
-            Manager = new BookingManager(BookingRepository.Object, RoomRepository.Object);
+            Clock.Setup(c => c.Today).Returns(today ?? DateTime.Today);
+            Manager = new BookingManager(BookingRepository.Object, RoomRepository.Object, Clock.Object);
         }
     }
 }

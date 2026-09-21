@@ -21,8 +21,10 @@ jobs:
 
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'HotelBooking' }}
+      # SonarCloud (free for public repositories). Override SONAR_HOST_URL for a self-hosted SonarQube.
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || github.repository_owner }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || format('{0}_HotelBookingApplication', github.repository_owner) }}
 
     steps:
       - name: Check out code
@@ -54,10 +56,12 @@ jobs:
         run: >
           dotnet sonarscanner begin
           /k:"$SONAR_PROJECT_KEY"
+          /o:"$SONAR_ORGANIZATION"
           /d:sonar.host.url="$SONAR_HOST_URL"
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
           /d:sonar.exclusions="**/wwwroot/lib/**,**/*.db"
+          /d:sonar.coverage.exclusions="HotelBooking.Mvc/**,HotelBooking.WebApi/**,HotelBooking.Infrastructure/**"
           /d:sonar.qualitygate.wait=true
 
       - name: Restore

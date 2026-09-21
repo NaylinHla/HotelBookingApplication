@@ -17,6 +17,7 @@ builder.Services.AddDbContext<HotelBookingContext>(opt =>
 builder.Services.AddScoped<IRepository<Room>, RoomRepository>();
 builder.Services.AddScoped<IRepository<Customer>, CustomerRepository>();
 builder.Services.AddScoped<IRepository<Booking>, BookingRepository>();
+builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<IBookingManager, BookingManager>();
 builder.Services.AddTransient<IDbInitializer, DbInitializer>();
 
