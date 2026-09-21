@@ -7,9 +7,9 @@ namespace HotelBooking.Core
 {
     public class BookingManager : IBookingManager
     {
-        private IRepository<Booking> bookingRepository;
-        private IRepository<Room> roomRepository;
-        private IClock clock;
+        private readonly IRepository<Booking> bookingRepository;
+        private readonly IRepository<Room> roomRepository;
+        private readonly IClock clock;
 
         // Constructor injection
         public BookingManager(IRepository<Booking> bookingRepository, IRepository<Room> roomRepository)
