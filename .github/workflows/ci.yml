@@ -1,10 +1,14 @@
 name: CI
 
-# Runs the unit tests with coverage and SonarQube static analysis, only for
-# pull requests from the develop branch into the main branch.
+# Runs the unit tests with coverage and SonarQube static analysis for pull
+# requests from the develop branch into main, and for pushes to main (so the
+# main branch analysis shows up on SonarCloud). Can also be run manually.
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,10 +18,11 @@ jobs:
   build-test-analyze:
     name: Build, test and SonarQube analysis
     runs-on: ubuntu-latest
-    # Only PRs from develop (in this repository, not a fork) into main.
+    # PRs only from develop (in this repository, not a fork); pushes and manual runs always.
     if: >
-      github.head_ref == 'develop' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event_name != 'pull_request' ||
+      (github.head_ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
 
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
