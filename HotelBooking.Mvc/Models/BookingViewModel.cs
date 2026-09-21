@@ -7,8 +7,8 @@ namespace HotelBooking.Mvc.Models
 {
     public class BookingViewModel : IBookingViewModel
     {
-        private IRepository<Booking> bookingRepository;
-        private IBookingManager bookingManager;
+        private readonly IRepository<Booking> bookingRepository;
+        private readonly IBookingManager bookingManager;
         private int yearToDisplay;
 
         public BookingViewModel(IRepository<Booking> repository, IBookingManager manager)

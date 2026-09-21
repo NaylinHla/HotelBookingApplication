@@ -9,11 +9,11 @@ namespace HotelBooking.Mvc.Controllers
 {
     public class BookingsController : Controller
     {
-        private IRepository<Booking> bookingRepository;
-        private IRepository<Customer> customerRepository;
-        private IRepository<Room> roomRepository;
-        private IBookingManager bookingManager;
-        private IBookingViewModel bookingViewModel;
+        private readonly IRepository<Booking> bookingRepository;
+        private readonly IRepository<Customer> customerRepository;
+        private readonly IRepository<Room> roomRepository;
+        private readonly IBookingManager bookingManager;
+        private readonly IBookingViewModel bookingViewModel;
 
         public BookingsController(IRepository<Booking> bookingRepos, IRepository<Room> roomRepos,
             IRepository<Customer> customerRepos, IBookingManager manager, IBookingViewModel viewModel)

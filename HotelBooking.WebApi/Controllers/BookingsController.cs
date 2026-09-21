@@ -9,8 +9,8 @@ namespace HotelBooking.WebApi.Controllers
     [Route("[controller]")]
     public class BookingsController : Controller
     {
-        private IRepository<Booking> bookingRepository;
-        private IBookingManager bookingManager;
+        private readonly IRepository<Booking> bookingRepository;
+        private readonly IBookingManager bookingManager;
 
         public BookingsController(IRepository<Booking> bookingRepos, IBookingManager manager)
         {
