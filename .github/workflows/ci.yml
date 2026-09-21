@@ -28,7 +28,7 @@ jobs:
       # SonarCloud (free for public repositories). Override SONAR_HOST_URL for a self-hosted SonarQube.
       SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || 'https://sonarcloud.io' }}
       SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'naylinhla' }}
-      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'naylinhla_HotelBookingApplication' }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'naylinhla_hotelbookingapplication' }}
 
     steps:
       - name: Check out code

@@ -131,7 +131,7 @@ The pipeline is configured for [SonarCloud](https://sonarcloud.io), which is fre
 3. In SonarCloud, go to *My Account → Security* and generate a token.
 4. In GitHub, go to *Settings → Secrets and variables → Actions* and add:
    - **secret** `SONAR_TOKEN`: the token from step 3
-   - **variables**, only if they differ from the defaults `naylinhla` and `naylinhla_HotelBookingApplication` (SonarCloud keys are lowercase): `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY`
+   - **variables**, only if they differ from the defaults `naylinhla` and `naylinhla_hotelbookingapplication` (SonarCloud keys are lowercase): `SONAR_ORGANIZATION` and `SONAR_PROJECT_KEY`
 5. Merge the pull request from `develop` into `main` (or push to `main`). When the run finishes, the results are on the SonarCloud dashboard, the "Project health dashboard" for the presentation.
 
 To use a self-hosted SonarQube instead, set the variable `SONAR_HOST_URL` to its address (it must be reachable from GitHub-hosted runners) and remove the `/o:` line from the `sonarscanner begin` step.
