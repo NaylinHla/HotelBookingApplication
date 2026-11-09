@@ -1,0 +1,137 @@
+{
+	"info": {
+		"name": "CreateBooking",
+		"description": "Automated API tests for the Create Booking endpoint (POST /Bookings) of HotelBooking.WebApi. See docs/TestDesign.md for the test case numbers referenced below (TC1, TC5).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://localhost:5001"
+		}
+	],
+	"item": [
+		{
+			"name": "Create booking - valid dates, room available (TC5)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Dates relative to today so the test never goes stale.",
+							"// Chosen to land before the seed data's fully-booked period (today+4..+18),",
+							"// so a room is guaranteed to be free.",
+							"const toIsoDate = (daysFromToday) => {",
+							"    const d = new Date();",
+							"    d.setDate(d.getDate() + daysFromToday);",
+							"    return d.toISOString().split('T')[0];",
+							"};",
+							"",
+							"pm.collectionVariables.set('startDate', toIsoDate(1));",
+							"pm.collectionVariables.set('endDate', toIsoDate(3));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status code is 201 Created', function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"pm.test('Response body is empty (CreatedAtRoute with no payload)', function () {",
+							"    pm.expect(pm.response.text()).to.eql('');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"startDate\": \"{{startDate}}\",\n  \"endDate\": \"{{endDate}}\",\n  \"customerId\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/Bookings",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"Bookings"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create booking - start date in the past (TC1)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Start date is yesterday, which is always invalid regardless of when this runs.",
+							"const toIsoDate = (daysFromToday) => {",
+							"    const d = new Date();",
+							"    d.setDate(d.getDate() + daysFromToday);",
+							"    return d.toISOString().split('T')[0];",
+							"};",
+							"",
+							"pm.collectionVariables.set('pastStartDate', toIsoDate(-1));",
+							"pm.collectionVariables.set('pastEndDate', toIsoDate(2));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status code is 400 Bad Request', function () {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test('Error message explains the invalid date', function () {",
+							"    pm.expect(pm.response.text()).to.include('start date');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"startDate\": \"{{pastStartDate}}\",\n  \"endDate\": \"{{pastEndDate}}\",\n  \"customerId\": 1\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/Bookings",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"Bookings"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

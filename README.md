@@ -20,6 +20,8 @@ An ASP.NET Core MVC application for managing hotel rooms, customers and room boo
 | `HotelBooking.WebApi` | REST API exposing bookings, customers and rooms (Postman collection in `Postman/`) |
 | `HotelBooking.UnitTests` | xUnit + Moq unit tests for `HotelBooking.Core` (and the WebApi `RoomsController`) |
 | `HotelBooking.IntegrationTests` | xUnit integration tests using an in-memory SQLite database |
+| `HotelBooking.BddTests` | Reqnroll (Cucumber-style) BDD scenarios for Create Booking, run as xUnit tests |
+| `HotelBooking.SeleniumTests` | Selenium end-to-end tests for Create Booking, driven through Chrome against `HotelBooking.Mvc` |
 
 Dependencies flow inward: `Mvc` and `Infrastructure` depend on `Core`, and `Core` depends on nothing. Services are wired through constructor injection in `HotelBooking.Mvc/Program.cs`.
 
@@ -52,10 +54,15 @@ Any data you enter is therefore lost on restart. Outside Development the initial
 ## Running the tests
 
 ```bash
-dotnet test HotelBooking.sln                 # everything
 dotnet test HotelBooking.UnitTests           # unit tests only
 dotnet test HotelBooking.IntegrationTests    # integration tests only
+dotnet test HotelBooking.BddTests            # Reqnroll BDD scenarios for Create Booking
 ```
+
+`dotnet test HotelBooking.sln` runs all of the above too, but also picks up `HotelBooking.SeleniumTests`,
+which needs `HotelBooking.Mvc` already running and Chrome installed (see
+[Mini project part 2](#mini-project-part-2--four-kinds-of-testing-for-create-booking) below) — run that
+project on its own once the app is up, rather than as part of a plain solution-wide `dotnet test`.
 
 The integration tests create an in-memory SQLite database, seed it with `DbInitializer`, and exercise `BookingManager` against real repositories.
 
@@ -100,6 +107,72 @@ All business logic in `HotelBooking.Core` lives in `BookingManager`. It is cover
 - *Independent, deterministic tests:* every test builds its own data, and dates are day offsets from `DateTime.Today`, so nothing depends on the calendar or on test order.
 - *Readable set-up:* `Helpers/TestData.cs` (data builders) and `Helpers/BookingManagerFactory.cs` (wires the mocks into a `BookingManager`) keep each test focused on its scenario.
 - *Negative and side-effect tests:* failing operations are checked for what they must *not* do, such as adding a booking or mutating the input.
+
+## Mini project part 2 — four kinds of testing for Create Booking
+
+Four techniques are demonstrated against the **Create Booking** feature (`BookingManager.CreateBooking`,
+`HotelBooking.Core/Services/BookingManager.cs`). The test design behind all of them —
+equivalence classes, boundary values, a decision table and the numbered test cases TC1–TC6 — is in
+[`docs/TestDesign.md`](docs/TestDesign.md). Each part below references the TC numbers it implements.
+
+### 1. Black-box test design
+
+[`docs/TestDesign.md`](docs/TestDesign.md) is a document, not code — open it directly. It derives TC1–TC6
+from the inputs (`StartDate`, `EndDate`, room availability), their equivalence classes/boundaries, and a
+4-rule decision table, before any test is written.
+
+### 2. BDD with Reqnroll (Cucumber-style)
+
+Project: `HotelBooking.BddTests`. Feature file: `Features/CreateBooking.feature` — a `Scenario Outline` whose
+`Examples` table is TC1–TC6 from the decision table. Step definitions (`Steps/CreateBookingSteps.cs`) call
+`BookingManager` directly with `IRepository<Booking>`/`IRepository<Room>` mocked with Moq, the same way
+`HotelBooking.UnitTests` does it.
+
+```bash
+dotnet test HotelBooking.BddTests
+```
+
+No app needs to be running — this test project talks to the business logic directly, in memory.
+
+### 3. Automated API testing with Postman
+
+Collection: `Postman/CreateBooking.postman_collection.json` (a focused collection for this feature; the
+broader `Postman/HotelBooking.postman_collection.json` already in the repo covers more endpoints). It has
+2 requests against the Web API's `POST /Bookings`, both with `pm.test`/`pm.expect` assertions in a
+post-response script, and a pre-request script that computes dates relative to "today" so the tests don't
+go stale:
+
+- **Create booking - valid dates, room available (TC5)** — expects `201 Created`.
+- **Create booking - start date in the past (TC1)** — expects `400 Bad Request`.
+
+To run it:
+1. Start the Web API: `dotnet run --project HotelBooking.WebApi --launch-profile https` (listens on
+   `https://localhost:5001`; it reseeds a fresh in-memory database with 3 rooms on every start, so the
+   collection's dates — tomorrow and the day after — are always free).
+2. In the Postman desktop app: **File → Import** → select `Postman/CreateBooking.postman_collection.json`.
+3. Select the collection, then **Run** (or run each request individually). Both requests should pass.
+   The `baseUrl` collection variable defaults to `https://localhost:5001`; if Postman complains about the
+   self-signed dev certificate, turn off **Settings → General → SSL certificate verification**.
+
+### 4. End-to-end testing with Selenium
+
+Project: `HotelBooking.SeleniumTests`. Page object: `Pages/BookingCreatePage.cs`, wrapping the real
+`Bookings/Create` Razor form in `HotelBooking.Mvc`. Tests in `CreateBookingTests.cs`:
+
+- **`CreateBooking_ValidDatesRoomAvailable_RedirectsToBookingsList`** (TC5) — fills in valid dates, submits,
+  asserts the page redirects to the bookings list.
+- **`CreateBooking_StartDateInThePast_ShowsErrorAndStaysOnPage`** (TC1) — submits a past start date, asserts
+  the error message is shown.
+
+To run it:
+1. Start the MVC app: `dotnet run --project HotelBooking.Mvc --launch-profile https` (listens on
+   `https://localhost:5001`; leave it running).
+2. Make sure Chrome is installed — Selenium 4's built-in Selenium Manager downloads a matching ChromeDriver
+   automatically, no separate driver install needed.
+3. In another terminal: `dotnet test HotelBooking.SeleniumTests`.
+
+These tests drive a real browser against the running app, so the app must already be up first; the test
+project does not start it for you.
 
 ### Branching workflow
 
